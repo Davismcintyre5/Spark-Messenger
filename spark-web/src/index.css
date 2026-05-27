@@ -1,0 +1,310 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400 dark:bg-gray-600;
+  }
+}
+
+@layer components {
+  .message-bubble-sent {
+    @apply bg-spark-500 text-white rounded-2xl rounded-br-md px-4 py-2 max-w-[75%];
+  }
+  .message-bubble-received {
+    @apply bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-bl-md px-4 py-2 max-w-[75%];
+  }
+  .ghost-mode-overlay {
+    @apply opacity-60 grayscale;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Legal Document Styling */
+.formatted-legal-content {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.6;
+  color: #1f2937;
+}
+
+/* Main Sections (1., 2., 3., etc.) */
+.formatted-legal-content .section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #bfdbfe;
+}
+
+.formatted-legal-content .uppercase-title {
+  letter-spacing: 0.5px;
+}
+
+/* Subsections (3.1, 4.2, etc.) */
+.formatted-legal-content .subsection-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #2563eb;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Subsection items */
+.formatted-legal-content .subsection-item {
+  margin-bottom: 0.5rem;
+  padding-left: 1rem;
+  color: #374151;
+}
+
+/* Regular paragraphs */
+.formatted-legal-content .legal-paragraph {
+  margin-bottom: 1rem;
+  color: #4b5563;
+}
+
+/* Bullet lists */
+.formatted-legal-content .bullet-list {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+  list-style-type: disc;
+}
+
+.formatted-legal-content .bullet-list li {
+  margin-bottom: 0.5rem;
+  color: #4b5563;
+}
+
+/* Legal section wrapper */
+.formatted-legal-content .legal-section {
+  margin-bottom: 1.5rem;
+}
+
+/* Dark mode */
+.dark .formatted-legal-content {
+  color: #e5e7eb;
+}
+
+.dark .formatted-legal-content .section-title {
+  color: #60a5fa;
+  border-bottom-color: #1e40af;
+}
+
+.dark .formatted-legal-content .subsection-title {
+  color: #93c5fd;
+}
+
+.dark .formatted-legal-content .subsection-item,
+.dark .formatted-legal-content .legal-paragraph,
+.dark .formatted-legal-content .bullet-list li {
+  color: #d1d5db;
+}
+
+/* Scrollbar Styling */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #93c5fd;
+  border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #60a5fa;
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #1e40af;
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #3b82f6;
+}
+
+/* Print Styles */
+@media print {
+  .fixed {
+    position: relative !important;
+  }
+  
+  .shrink-0,
+  .sticky,
+  button {
+    display: none !important;
+  }
+  
+  .formatted-legal-content {
+    color: black !important;
+  }
+  
+  .formatted-legal-content .section-title {
+    color: black !important;
+    border-bottom-color: #ccc !important;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+/* Legal content styling */
+.formatted-legal-content {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.6;
+  color: #1f2937;
+}
+
+.formatted-legal-content h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.formatted-legal-content h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1e40af;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.formatted-legal-content h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2563eb;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.formatted-legal-content p {
+  margin-bottom: 0.75rem;
+  color: #4b5563;
+}
+
+.formatted-legal-content ul, 
+.formatted-legal-content ol {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.formatted-legal-content li {
+  margin-bottom: 0.25rem;
+  color: #4b5563;
+}
+
+.formatted-legal-content a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.formatted-legal-content a:hover {
+  color: #1d4ed8;
+}
+
+.formatted-legal-content strong {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* Dark mode */
+.dark .formatted-legal-content {
+  color: #e5e7eb;
+}
+
+.dark .formatted-legal-content h1 {
+  color: #60a5fa;
+  border-bottom-color: #374151;
+}
+
+.dark .formatted-legal-content h2 {
+  color: #93c5fd;
+}
+
+.dark .formatted-legal-content h3 {
+  color: #bfdbfe;
+}
+
+.dark .formatted-legal-content p,
+.dark .formatted-legal-content li {
+  color: #d1d5db;
+}
+
+.dark .formatted-legal-content strong {
+  color: #f3f4f6;
+}
+
+/* Print styles */
+@media print {
+  header, .shrink-0, button, .bg-gradient-to-r, .text-center:last-child {
+    display: none !important;
+  }
+  
+  .prose {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  .prose * {
+    color: black !important;
+  }
+}

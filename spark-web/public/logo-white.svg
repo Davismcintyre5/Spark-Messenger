@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- White circle outline for dark backgrounds -->
+  <circle cx="60" cy="60" r="56" stroke="#FFFFFF" stroke-width="3" fill="none" opacity="0.9"/>
+  <!-- White spark bolt -->
+  <path d="M65 10L30 65H55L50 110L90 50H62L68 10H65Z" fill="#FFFFFF"/>
+</svg>
