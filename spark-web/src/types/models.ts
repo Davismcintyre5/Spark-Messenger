@@ -99,6 +99,18 @@ export interface Message {
   createdAt: string;
   updatedAt: string;
   temporaryId?: string;
+  
+  // Location and Contact properties
+  location?: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
+  contact?: {
+    name: string;
+    phone: string;
+    email?: string;
+  };
 }
 
 export interface Reaction {
@@ -123,6 +135,13 @@ export interface Group {
   inviteLink: string;
   privacy: 'open' | 'closed';
   createdAt: string;
+  
+  // Additional properties used in components
+  memberVisibility?: 'all' | 'admins-only' | 'members-only';
+  joinApproval?: 'auto' | 'admin';
+  currentUserRole?: 'owner' | 'admin' | 'member';
+  inGroup?: boolean;
+  updatedAt?: string;
 }
 
 // ====================================================================

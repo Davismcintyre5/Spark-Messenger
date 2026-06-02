@@ -5,7 +5,7 @@ import {
   Share2, LogOut, MessageCircle, Settings, Shield, 
   Camera, Image, Video, FileText, Pin, Star, 
   Clock, Lock, Globe, Link, QrCode, Trash2, Edit3,
-  CheckCircle, AlertCircle, Download, Upload, Filter
+  CheckCircle, AlertCircle, Download, Upload, Filter, Copy
 } from 'lucide-react';
 import { useGroup } from '@/hooks/useGroups';
 import { chatService } from '@/services/chatService';
@@ -48,7 +48,6 @@ export default function GroupDetailPage() {
       const response = await api.post(`/groups/${groupId}/invite-link`);
       setInviteLink(response.data.data.inviteLink);
     } catch {
-      // Use fallback
       setInviteLink(`${window.location.origin}/groups/join/${groupId}`);
     }
   };
@@ -105,8 +104,9 @@ export default function GroupDetailPage() {
 
   const members = group.members || [];
   const admins = (group.admins || []).map((a: any) => typeof a === 'string' ? a : a._id);
-  const ownerId = typeof group.ownerId === 'string' ? group.ownerId : group.ownerId?._id;
-  const isAdmin = admins.includes(group.currentUserRole === 'owner' || group.currentUserRole === 'admin');
+  const ownerId = typeof group.ownerId === 'string' ? group.ownerId : (group.ownerId as any)?._id;
+  // FIXED: Add type assertion for currentUserRole
+  const isAdmin = admins.includes((group as any).currentUserRole === 'owner' || (group as any).currentUserRole === 'admin');
 
   const filteredMembers = searchMembers
     ? members.filter((m: any) => m.displayName?.toLowerCase().includes(searchMembers.toLowerCase()))
@@ -188,14 +188,16 @@ export default function GroupDetailPage() {
             <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-xs">
               <Users className="w-3 h-3" /> {group.memberCount} members
             </span>
-            {group.privacy === 'private' && (
+            {/* FIXED: privacy comparison - changed to 'closed' */}
+            {group.privacy === 'closed' && (
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-xs">
-                <Lock className="w-3 h-3" /> Private
+                <Lock className="w-3 h-3" /> Closed
               </span>
             )}
-            {group.privacy === 'public' && (
+            {/* FIXED: privacy comparison - changed to 'open' */}
+            {group.privacy === 'open' && (
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-xs">
-                <Globe className="w-3 h-3" /> Public
+                <Globe className="w-3 h-3" /> Open
               </span>
             )}
             {group.createdAt && (
@@ -204,7 +206,8 @@ export default function GroupDetailPage() {
               </span>
             )}
           </div>
-          {!group.inGroup && (
+          {/* FIXED: inGroup with type assertion */}
+          {!(group as any).inGroup && (
             <button className="mt-4 px-6 py-2 bg-spark-500 text-white rounded-full text-sm font-medium">
               Join Group
             </button>
@@ -214,7 +217,7 @@ export default function GroupDetailPage() {
         {/* Action Buttons */}
         <div className="flex justify-around px-4 py-4 border-b border-gray-100 dark:border-gray-800">
           <button 
-            onClick={() => navigate(`/chats/${group.chatId?._id || group.chatId}`)}
+            onClick={() => navigate(`/chats/${(group.chatId as any)?._id || group.chatId}`)}
             className="flex flex-col items-center gap-1"
           >
             <div className="w-12 h-12 rounded-full bg-spark-100 dark:bg-spark-900/30 flex items-center justify-center">
@@ -295,13 +298,14 @@ export default function GroupDetailPage() {
       </div>
 
       {/* Modals */}
+      {/* FIXED: Changed name to groupName */}
       <GroupSettingsModal
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
         groupId={groupId!}
         groupName={group.name}
-        groupDescription={group.description || ''}
-        groupIcon={group.icon}
+        description={group.description || ''}
+        icon={group.icon}
         members={members}
         admins={admins}
         ownerId={ownerId}
@@ -397,6 +401,3 @@ export default function GroupDetailPage() {
     </div>
   );
 }
-
-// Missing imports
-import { Copy } from 'lucide-react';

@@ -198,7 +198,7 @@ export default function MessageBubble({ message, isOwn, showSenderName = false, 
             <div className="w-48 h-32 bg-gray-300 dark:bg-gray-700 rounded-lg flex items-center justify-center">
               <span className="text-xs">📍 Location</span>
             </div>
-            <p className="text-xs mt-1">{message.location.address || `${message.location.latitude}, ${message.location.longitude}`}</p>
+            <p className="text-xs mt-1">{message.location?.address || `${message.location?.latitude}, ${message.location?.longitude}`}</p>
             <div className="flex items-center gap-1 mt-1 justify-end">
               <span className="text-[10px] opacity-70">{time}</span>
               {isOwn && <StatusIcon />}
@@ -226,8 +226,8 @@ export default function MessageBubble({ message, isOwn, showSenderName = false, 
               <span className="text-lg">👤</span>
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium">{message.contact.name}</p>
-              <p className="text-xs opacity-70">{message.contact.phone}</p>
+              <p className="text-sm font-medium">{message.contact?.name}</p>
+              <p className="text-xs opacity-70">{message.contact?.phone}</p>
             </div>
           </div>
           <div className="flex items-center gap-1 mt-1">

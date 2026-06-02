@@ -1,3 +1,4 @@
+// config/db.ts
 import mongoose from 'mongoose';
 import Redis from 'ioredis';
 import env from './env';
@@ -5,6 +6,9 @@ import { logger } from '../utils/logger';
 
 let redisClient: Redis | null = null;
 let redisAvailable = false;
+
+// DIRECT HARDCODED URL - Copy exactly as is
+const REDIS_URL = 'rediss://default:gQAAAAAAAYbYAAIgcDJmMDk1MTNhYjM2YWE0NjQ0YWY0MDRlOWFiZmUwNmU1Zg@daring-fowl-100056.upstash.io:6379';
 
 export async function connectMongoDB(): Promise<void> {
   try {
@@ -32,7 +36,8 @@ export async function connectMongoDB(): Promise<void> {
       family: 4,
     });
 
-    logger.info(`MongoDB: Connected to ${env.MONGODB_URI.split('@').pop() || 'localhost'}`);
+    const dbHost = env.MONGODB_URI.split('@').pop() || 'localhost';
+    logger.info(`MongoDB: Connected to ${dbHost}`);
   } catch (error) {
     logger.error('MongoDB: Failed to connect', { error });
     process.exit(1);
@@ -40,44 +45,54 @@ export async function connectMongoDB(): Promise<void> {
 }
 
 export async function connectRedis(): Promise<Redis | null> {
-  if (redisClient) {
+  if (redisClient && redisAvailable) {
     return redisClient;
   }
 
+  console.log('⏳ Connecting to Redis on Render...');
+  console.log('📍 Using Upstash Redis');
+
   try {
-    redisClient = new Redis(env.REDIS_URL, {
-      maxRetriesPerRequest: 1,
+    redisClient = new Redis(REDIS_URL, {
+      tls: {},
+      maxRetriesPerRequest: 3,
       retryStrategy(times) {
-        if (times > 3) {
+        console.log(`🔄 Redis retry ${times}`);
+        if (times > 5) {
+          console.error('❌ Redis max retries reached');
           return null;
         }
-        return Math.min(times * 200, 1000);
+        return Math.min(times * 2000, 10000);
       },
-      lazyConnect: true,
-      enableOfflineQueue: false,
+      connectTimeout: 15000,
     });
 
-    redisClient.on('error', () => {
-      redisAvailable = false;
+    redisClient.on('connect', () => {
+      console.log('📡 Redis: Connecting...');
     });
 
-    redisClient.on('close', () => {
+    redisClient.on('ready', () => {
+      console.log('✅ Redis: Connected and ready!');
+      redisAvailable = true;
+    });
+
+    redisClient.on('error', (err) => {
+      console.error('❌ Redis error:', err.message);
       redisAvailable = false;
     });
 
     await redisClient.connect();
-    await redisClient.ping();
-
-    redisAvailable = true;
-
-    logger.info(`Redis: Connected to ${env.REDIS_URL.split('@').pop() || 'localhost'}`);
-    return redisClient;
-  } catch {
-    if (redisClient) {
-      try { redisClient.disconnect(); } catch {}
-      redisClient = null;
+    const pong = await redisClient.ping();
+    
+    if (pong === 'PONG') {
+      console.log('✅ Redis PONG received - Connected to Upstash!');
+      redisAvailable = true;
+      return redisClient;
     }
-    logger.warn('Redis: Not available — running without cache and queues');
+    
+    throw new Error('Invalid response');
+  } catch (error: any) {
+    console.error('❌ Redis connection failed:', error.message);
     redisAvailable = false;
     return null;
   }
@@ -102,14 +117,14 @@ export async function disconnectDatabases(): Promise<void> {
       redisAvailable = false;
       logger.info('Redis: Disconnected');
     }
-  } catch {
-    // Redis disconnect failed — non-critical
+  } catch (error) {
+    logger.warn('Redis: Disconnect failed', { error });
   }
 
   try {
     await mongoose.disconnect();
     logger.info('MongoDB: Disconnected');
-  } catch {
-    // MongoDB disconnect failed
+  } catch (error) {
+    logger.warn('MongoDB: Disconnect failed', { error });
   }
 }

@@ -5,7 +5,8 @@ interface SocketContextType {
   socket: Socket | null;
 }
 
-const SocketContext = createContext<SocketContextType>({ socket: null });
+// ADD export here:
+export const SocketContext = createContext<SocketContextType>({ socket: null });
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:5000';
 const ACCESS_TOKEN_KEY = 'spark_access_token';

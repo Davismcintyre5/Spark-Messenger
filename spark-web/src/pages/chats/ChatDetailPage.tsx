@@ -20,6 +20,7 @@ import CallTimer from '@/components/calls/CallTimer';
 import AddContactOverlay from '@/components/chat/AddContactOverlay';
 import { Message, MessageType } from '@/types/models';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import Button from '@/components/ui/Button';
 
 export default function ChatDetailPage() {
   const { chatId } = useParams<{ chatId: string }>();
@@ -508,11 +509,7 @@ export default function ChatDetailPage() {
         onVoice={handleVoiceRecord}
         isRecording={isRecording}
         isBlocked={isBlocked && !isGroup}
-        showEmoji={showEmojiPicker}
-        onToggleEmoji={() => setShowEmojiPicker(!showEmojiPicker)}
-        onEmojiSelect={(emoji) => { handleSend(emoji); setShowEmojiPicker(false); }}
       />
-
       {/* Report Modal */}
       <Modal isOpen={showReportModal} onClose={() => setShowReportModal(false)} title="Report Contact" size="sm">
         <div className="space-y-4">
@@ -543,6 +540,3 @@ export default function ChatDetailPage() {
     </div>
   );
 }
-
-// Import missing Button component
-import Button from '@/components/ui/Button';

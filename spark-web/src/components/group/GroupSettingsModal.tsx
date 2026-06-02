@@ -19,12 +19,19 @@ interface GroupSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   groupId: string;
+  groupName?: string;
+  name?: string;
+  description?: string;
+  icon?: string;
+  members?: any[];
+  admins?: any[];
+  ownerId?: any;
   onSaved: () => void;
 }
 
 type SettingsTab = 'general' | 'privacy' | 'permissions' | 'members' | 'admins' | 'media' | 'security';
 
-export default function GroupSettingsModal({ isOpen, onClose, groupId, onSaved }: GroupSettingsModalProps) {
+export default function GroupSettingsModal({ isOpen, onClose, groupId, groupName, name, description: propDescription, icon: propIcon, members: propMembers, admins: propAdmins, ownerId: propOwnerId, onSaved }: GroupSettingsModalProps) {
   const { user } = useAuth();
   const addToast = useUIStore((s) => s.addToast);
   const { data: group, refetch: refetchGroup } = useGroup(groupId);
@@ -39,8 +46,8 @@ export default function GroupSettingsModal({ isOpen, onClose, groupId, onSaved }
   const toggleAdmin = useToggleAdmin();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [groupNameState, setGroupNameState] = useState('');
+  const [groupDescription, setGroupDescription] = useState('');
   const [searchMembers, setSearchMembers] = useState('');
   const [saving, setSaving] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
@@ -84,14 +91,25 @@ export default function GroupSettingsModal({ isOpen, onClose, groupId, onSaved }
     encryptMessages: true,
   });
 
+  // Use props or group data
+  const displayName = groupName || name || group?.name || '';
+  const displayDescription = propDescription || group?.description || '';
+  const displayIcon = propIcon || group?.icon || '';
+  const membersList = propMembers || group?.members || [];
+  const adminsList = propAdmins || group?.admins?.map((a: any) => typeof a === 'string' ? a : a._id) || [];
+  const groupOwnerId = propOwnerId || (typeof group?.ownerId === 'string' ? group.ownerId : (group?.ownerId as any)?._id);
+
   // Load group data when modal opens (NO auto-generate invite)
   useEffect(() => {
     if (isOpen && group) {
-      setName(group.name);
-      setDescription(group.description || '');
-      setGroupPrivacy(group.privacy || 'private');
+      setGroupNameState(group.name);
+      setGroupDescription(group.description || '');
+      setGroupPrivacy((group.privacy as any) || 'closed'); // FIXED: added type assertion
       setMemberVisibility(group.memberVisibility || 'all');
       setJoinApproval(group.joinApproval || 'admin');
+    } else if (isOpen && displayName) {
+      setGroupNameState(displayName);
+      setGroupDescription(displayDescription);
     }
     if (isOpen && settings) {
       setPermissions(settings.restrictions || permissions);
@@ -102,7 +120,7 @@ export default function GroupSettingsModal({ isOpen, onClose, groupId, onSaved }
         setInviteGenerated(true);
       }
     }
-  }, [isOpen, group, settings]);
+  }, [isOpen, group, settings, displayName, displayDescription]);
 
   // Reset flag when modal closes
   useEffect(() => {
@@ -132,10 +150,10 @@ export default function GroupSettingsModal({ isOpen, onClose, groupId, onSaved }
   };
 
   const handleSaveGeneral = async () => {
-    if (!name.trim()) return;
+    if (!groupNameState.trim()) return;
     setSaving(true);
     try {
-      await updateGroup.mutateAsync({ groupId, updates: { name, description } });
+      await updateGroup.mutateAsync({ groupId, updates: { name: groupNameState, description: groupDescription } });
       addToast({ type: 'success', message: 'Group settings saved' });
       onSaved();
       refetchGroup();
@@ -213,20 +231,17 @@ export default function GroupSettingsModal({ isOpen, onClose, groupId, onSaved }
     }
   };
 
-  const members = group?.members || [];
-  const admins = group?.admins?.map((a: any) => typeof a === 'string' ? a : a._id) || [];
-  const ownerId = typeof group?.ownerId === 'string' ? group.ownerId : group?.ownerId?._id;
-  const isOwner = ownerId === user?._id;
+  const isOwner = groupOwnerId === user?._id;
 
   const filteredMembers = searchMembers
-    ? members.filter((m: any) => m.displayName?.toLowerCase().includes(searchMembers.toLowerCase()))
-    : members;
+    ? membersList.filter((m: any) => m.displayName?.toLowerCase().includes(searchMembers.toLowerCase()))
+    : membersList;
 
   const tabs: Array<{ key: SettingsTab; label: string; icon: React.ReactNode }> = [
     { key: 'general', label: 'General', icon: <Settings className="w-4 h-4" /> },
     { key: 'privacy', label: 'Privacy', icon: <Lock className="w-4 h-4" /> },
     { key: 'permissions', label: 'Permissions', icon: <Shield className="w-4 h-4" /> },
-    { key: 'members', label: `Members (${members.length})`, icon: <Users className="w-4 h-4" /> },
+    { key: 'members', label: `Members (${membersList.length})`, icon: <Users className="w-4 h-4" /> },
     { key: 'admins', label: 'Admins', icon: <Shield className="w-4 h-4" /> },
     { key: 'media', label: 'Media', icon: <Image className="w-4 h-4" /> },
     { key: 'security', label: 'Security', icon: <Lock className="w-4 h-4" /> },
@@ -260,7 +275,7 @@ export default function GroupSettingsModal({ isOpen, onClose, groupId, onSaved }
             <div className="space-y-4">
               <div className="flex justify-center">
                 <div className="relative">
-                  <Avatar src={group?.icon} name={name} size="xl" className="w-24 h-24" />
+                  <Avatar src={displayIcon} name={groupNameState} size="xl" className="w-24 h-24" />
                   {isOwner && (
                     <>
                       <button 
@@ -274,8 +289,8 @@ export default function GroupSettingsModal({ isOpen, onClose, groupId, onSaved }
                   )}
                 </div>
               </div>
-              <Input label="Group Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter group name" />
-              <Input label="Description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What's this group about?" />
+              <Input label="Group Name" value={groupNameState} onChange={(e) => setGroupNameState(e.target.value)} placeholder="Enter group name" />
+              <Input label="Description" value={groupDescription} onChange={(e) => setGroupDescription(e.target.value)} placeholder="What's this group about?" />
               
               {/* Invite Link Section - Manual generation only */}
               <div className="pt-2">
@@ -331,10 +346,9 @@ export default function GroupSettingsModal({ isOpen, onClose, groupId, onSaved }
                 <p className="text-sm font-medium mb-2">Group Privacy</p>
                 <div className="space-y-2">
                   {[
-                    { value: 'public', label: 'Public', icon: Globe, desc: 'Anyone can find and join' },
-                    { value: 'private', label: 'Private', icon: Lock, desc: 'Only invited members can join' },
+                    { value: 'open', label: 'Open', icon: Globe, desc: 'Anyone can find and join' },
+                    { value: 'closed', label: 'Closed', icon: Lock, desc: 'Only invited members can join' },
                     { value: 'invite-only', label: 'Invite Only', icon: Link, desc: 'Only via invite link' },
-                    { value: 'closed', label: 'Closed', icon: Ban, desc: 'No new members can join' },
                   ].map((option) => (
                     <button
                       key={option.value}
@@ -451,8 +465,8 @@ export default function GroupSettingsModal({ isOpen, onClose, groupId, onSaved }
               <div className="space-y-1">
                 {filteredMembers.map((member: any) => {
                   const memberId = member._id;
-                  const isOwnerFlag = memberId === ownerId;
-                  const isAdminFlag = admins.includes(memberId);
+                  const isOwnerFlag = memberId === groupOwnerId;
+                  const isAdminFlag = adminsList.includes(memberId);
                   const canModify = isOwner && !isOwnerFlag;
                   return (
                     <div key={memberId} className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
@@ -486,10 +500,10 @@ export default function GroupSettingsModal({ isOpen, onClose, groupId, onSaved }
             <div className="space-y-3">
               <p className="text-xs text-gray-400 mb-2">Manage group administrators</p>
               <div className="space-y-1">
-                {members.map((member: any) => {
+                {membersList.map((member: any) => {
                   const memberId = member._id;
-                  const isOwnerFlag = memberId === ownerId;
-                  const isAdminFlag = admins.includes(memberId);
+                  const isOwnerFlag = memberId === groupOwnerId;
+                  const isAdminFlag = adminsList.includes(memberId);
                   const canModify = isOwner && !isOwnerFlag;
                   return (
                     <div key={memberId} className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">

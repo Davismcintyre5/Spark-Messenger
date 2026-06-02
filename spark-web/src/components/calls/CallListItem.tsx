@@ -11,7 +11,7 @@ interface CallListItemProps {
 
 export default function CallListItem({ call }: CallListItemProps) {
   const { user } = useAuth();
-  const isIncoming = call.receiverId === user?.userId || (call.receiverId as any)?._id === user?.userId;
+  const isIncoming = call.receiverId === user?._id || (call.receiverId as any)?._id === user?._id;
   const otherParty = isIncoming ? call.callerId : call.receiverId;
   const name = (otherParty as any)?.displayName || 'Unknown';
   const avatar = (otherParty as any)?.avatar;

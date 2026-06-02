@@ -19,9 +19,22 @@ import { initializeSocket } from './socket/index';
 import { initializeCronJobs } from './jobs/index';
 import { initializeQueues } from './jobs/queue';
 import { logger, logRequest } from './utils/logger';
+import { startKeepAlive, stopKeepAlive } from './keepAlive';
 
 const app = express();
 const server = http.createServer(app);
+
+// ====================================================================
+// TRUST PROXY (Required for Render, Heroku, etc.)
+// ====================================================================
+app.set('trust proxy', 1);
+
+// Enable HTTP keep-alive
+const KEEP_ALIVE_TIMEOUT = parseInt(process.env.SERVER_KEEP_ALIVE_TIMEOUT || '65000');
+const HEADERS_TIMEOUT = parseInt(process.env.SERVER_HEADERS_TIMEOUT || '66000');
+
+server.keepAliveTimeout = KEEP_ALIVE_TIMEOUT;
+server.headersTimeout = HEADERS_TIMEOUT;
 
 // ====================================================================
 // MIDDLEWARE
@@ -33,6 +46,13 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 app.use(maintenanceMiddleware);
+
+// Add keep-alive headers
+app.use((_req, res, next) => {
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Keep-Alive', `timeout=${Math.floor(KEEP_ALIVE_TIMEOUT / 1000)}`);
+  next();
+});
 
 app.use(
   morgan(':method :url :status :response-time ms', {
@@ -50,7 +70,7 @@ app.use(
 );
 
 // ====================================================================
-// JSON RESPONSE ROUTES
+// PUBLIC ROUTES (No auth required - MUST come BEFORE API routes)
 // ====================================================================
 app.get('/', (_req, res) => {
   res.json({
@@ -95,6 +115,7 @@ app.get('/api', (_req, res) => {
   });
 });
 
+// Health check endpoints
 app.get('/health', async (_req, res) => {
   const health: any = {
     success: true,
@@ -137,6 +158,25 @@ app.get('/health', async (_req, res) => {
   res.status(statusCode).json(health);
 });
 
+// Simple ping endpoint for keep-alive
+app.get('/ping', (_req, res) => {
+  res.status(200).send('pong');
+});
+
+// Readiness probe
+app.get('/ready', (_req, res) => {
+  const isReady = mongoose.connection.readyState === 1;
+  res.status(isReady ? 200 : 503).json({ 
+    status: isReady ? 'ready' : 'not ready',
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
+});
+
+// Liveness probe
+app.get('/live', (_req, res) => {
+  res.status(200).json({ status: 'alive', uptime: process.uptime() });
+});
+
 // ====================================================================
 // API ROUTES
 // ====================================================================
@@ -168,51 +208,6 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 // ====================================================================
-// SMART STARTUP BANNER
-// ====================================================================
-async function printBanner(): Promise<void> {
-  console.log('');
-  console.log('  ⚡ ═══════════════════════════════════════════════ ⚡');
-  console.log('  ⚡                                                  ⚡');
-  console.log('  ⚡         S P A R K   M E S S E N G E R            ⚡');
-  console.log('  ⚡              Powered by HDM                       ⚡');
-  console.log('  ⚡                                                  ⚡');
-  console.log('  ⚡ ═══════════════════════════════════════════════ ⚡');
-  console.log('');
-  console.log(`  🚀 Server:        http://localhost:${env.PORT}`);
-  console.log(`  🌐 Client:        ${env.CLIENT_URL}`);
-  console.log(`  🛠️  Admin:         ${env.ADMIN_URL}`);
-  console.log(`  📦 Environment:   ${env.NODE_ENV}`);
-  console.log(`  📋 Version:       ${env.APP_VERSION}`);
-  console.log('');
-  console.log('  ─────────────────────────────────────────────────');
-  console.log('  🔌 FEATURE STATUS');
-  console.log('  ─────────────────────────────────────────────────');
-
-  const features: { name: string; enabled: boolean; icon: string }[] = [
-    { name: 'MongoDB', enabled: true, icon: '🗄️' },
-    { name: 'Redis', enabled: true, icon: '⚡' },
-    { name: 'Brevo (SMS/Email)', enabled: env.BREVO, icon: '📧' },
-    { name: 'Cloudinary (Media)', enabled: env.CLOUDINARY, icon: '🖼️' },
-    { name: 'Firebase (Push)', enabled: env.FIREBASE, icon: '🔔' },
-    { name: 'HDM AI', enabled: env.HDM_AI, icon: '🤖' },
-    { name: 'WebSocket', enabled: true, icon: '🔌' },
-    { name: 'Cron Jobs', enabled: true, icon: '⏰' },
-  ];
-
-  for (const feature of features) {
-    if (feature.enabled) {
-      console.log(`  ${feature.icon}  ${feature.name.padEnd(24)} ✅ Enabled`);
-    } else {
-      console.log(`  ${feature.icon}  ${feature.name.padEnd(24)} ⏭️  Skipped`);
-    }
-  }
-
-  console.log('  ─────────────────────────────────────────────────');
-  console.log('');
-}
-
-// ====================================================================
 // GRACEFUL SHUTDOWN
 // ====================================================================
 let isShuttingDown = false;
@@ -222,6 +217,9 @@ async function gracefulShutdown(signal: string): Promise<void> {
   isShuttingDown = true;
 
   console.log(`\n  ⚠️  Received ${signal}. Shutting down gracefully...\n`);
+
+  // Stop keep-alive
+  stopKeepAlive();
 
   server.close(async () => {
     console.log('  🔌 HTTP server closed');
@@ -254,6 +252,50 @@ process.on('uncaughtException', (error: Error) => {
   logger.error('Uncaught Exception', { error: error.message, stack: error.stack });
   gracefulShutdown('uncaughtException');
 });
+
+// ====================================================================
+// SMART STARTUP BANNER
+// ====================================================================
+async function printBanner(): Promise<void> {
+  console.log('');
+  console.log('  ⚡ ═══════════════════════════════════════════════ ⚡');
+  console.log('  ⚡         S P A R K   M E S S E N G E R            ⚡');
+  console.log('  ⚡              Powered by HDM                       ⚡');
+  console.log('  ⚡ ═══════════════════════════════════════════════ ⚡');
+  console.log('');
+  console.log(`  🚀 Server:        ${env.APP_URL || `http://localhost:${env.PORT}`}`);
+  console.log(`  🌐 Client:        ${env.CLIENT_URL}`);
+  console.log(`  🛠️  Admin:         ${env.ADMIN_URL}`);
+  console.log(`  📪 Environment:   ${env.NODE_ENV}`);
+  console.log(`  📋 Version:       ${env.APP_VERSION}`);
+  console.log('');
+  console.log('  ────────────────────────────────────────────────────');
+  console.log('  🔌 FEATURE STATUS');
+  console.log('  ────────────────────────────────────────────────────');
+
+  const features: { name: string; enabled: boolean; icon: string }[] = [
+    { name: 'MongoDB', enabled: true, icon: '🗄️' },
+    { name: 'Redis', enabled: true, icon: '⚡' },
+    { name: 'Brevo (SMS/Email)', enabled: env.BREVO, icon: '📫' },
+    { name: 'Cloudinary (Media)', enabled: env.CLOUDINARY, icon: '🖼️' },
+    { name: 'Firebase (Push)', enabled: env.FIREBASE, icon: '🔔' },
+    { name: 'HDM AI', enabled: env.HDM_AI, icon: '🤖' },
+    { name: 'WebSocket', enabled: true, icon: '🔌' },
+    { name: 'Cron Jobs', enabled: true, icon: '⏰' },
+    { name: 'Keep-Alive', enabled: process.env.KEEP_ALIVE_ENABLED !== 'false', icon: '💙' },
+  ];
+
+  for (const feature of features) {
+    if (feature.enabled) {
+      console.log(`  ${feature.icon}  ${feature.name.padEnd(24)} ✅ Enabled`);
+    } else {
+      console.log(`  ${feature.icon}  ${feature.name.padEnd(24)} ⏭️  Skipped`);
+    }
+  }
+
+  console.log('  ────────────────────────────────────────────────────');
+  console.log('');
+}
 
 // ====================================================================
 // START SERVER
@@ -291,6 +333,10 @@ async function start(): Promise<void> {
       console.log(`  ⚡  Spark Messenger is LIVE on port ${env.PORT}           ⚡`);
       console.log(`  ⚡ ═══════════════════════════════════════════════ ⚡\n`);
     });
+
+    // Start keep-alive for Render free tier
+    startKeepAlive();
+    
   } catch (error: any) {
     console.error(`\n  ❌ Failed to start server: ${error.message}\n`);
     logger.error('Server startup failed', { error: error.message, stack: error.stack });

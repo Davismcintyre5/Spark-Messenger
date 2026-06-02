@@ -34,7 +34,7 @@ const GroupGridCard = ({ group, onClick }: { group: any; onClick: () => void }) 
             group.name?.charAt(0).toUpperCase() || 'G'
           )}
         </div>
-        {group.isAdmin && (
+        {(group.currentUserRole === 'owner' || group.currentUserRole === 'admin') && (
           <span className="px-2 py-0.5 bg-spark-100 dark:bg-spark-900/50 text-spark-600 text-xs rounded-full">
             Admin
           </span>
@@ -75,8 +75,8 @@ export default function GroupsPage() {
   const myGroups = groups || [];
 
   // Calculate stats correctly
-  const adminGroups = myGroups.filter(g => g.isAdmin === true);
-  const memberGroups = myGroups.filter(g => g.isAdmin !== true);
+  const adminGroups = myGroups.filter(g => g.currentUserRole === 'owner' || g.currentUserRole === 'admin');
+  const memberGroups = myGroups.filter(g => g.currentUserRole === 'member');
   const totalMembersCount = myGroups.reduce((acc, g) => acc + (g.memberCount || 0), 0);
 
   const stats = {
@@ -92,8 +92,8 @@ export default function GroupsPage() {
       const matchesFilter = filterType === 'all' 
         ? true 
         : filterType === 'admin' 
-          ? g.isAdmin === true
-          : g.isAdmin !== true;
+          ? (g.currentUserRole === 'owner' || g.currentUserRole === 'admin')
+          : g.currentUserRole === 'member';
       return matchesSearch && matchesFilter;
     })
     .sort((a, b) => {

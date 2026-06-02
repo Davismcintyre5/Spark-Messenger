@@ -26,7 +26,7 @@ export default function StatusViewerPanel() {
   const [viewersList, setViewersList] = useState<any[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);  // FIXED: changed from NodeJS.Timeout
   const shouldNavigate = useRef(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -40,8 +40,8 @@ export default function StatusViewerPanel() {
     if (currentStatus?._id && !isMyStatus) {
       viewStatus.mutate(currentStatus._id, {
         onSuccess: (data) => {
-          if (data?.data?.viewerCount !== undefined) {
-            setViewerCount(data.data.viewerCount);
+          if (data?.viewerCount !== undefined) {  // FIXED: removed .data
+            setViewerCount(data.viewerCount);
           }
         }
       });
@@ -67,8 +67,6 @@ export default function StatusViewerPanel() {
       console.error('Failed to fetch viewers:', error);
     }
   };
-
-  // ... (rest of your existing code: handlePrev, handleNext, handleDeleteCurrentStatus, etc.)
 
   // Close menu when clicking outside
   useEffect(() => {

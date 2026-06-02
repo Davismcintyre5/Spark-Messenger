@@ -300,7 +300,7 @@ export default function StatusPage() {
 
   const compressImage = async (file: File): Promise<File> => {
     return new Promise((resolve) => {
-      const img = new Image();
+      const img = new window.Image(); // FIXED: changed from new Image() to new window.Image()
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
